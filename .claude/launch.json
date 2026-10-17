@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "notes",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 5180
+    }
+  ]
+}
