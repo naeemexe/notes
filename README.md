@@ -18,6 +18,25 @@ On iPad: open the URL in Safari → Share → **Add to Home Screen**. It opens f
 Your notes are saved as JSON files in `./data` on the Mac. Back up that folder.
 The Mac has to be awake with the server running for the iPad to sync.
 
+## Host it on the Windows laptop (https://notes.naeemislam.com)
+
+1. Copy `notes-data.zip` (a zip of the Mac's `data/` folder) to the laptop's Downloads.
+2. In PowerShell (not admin):
+   ```powershell
+   irm https://raw.githubusercontent.com/naeemexe/notes/main/scripts/setup-windows.ps1 -OutFile setup-notes.ps1
+   powershell -ExecutionPolicy Bypass -File setup-notes.ps1 -DataZip "$HOME\Downloads\notes-data.zip"
+   ```
+   It installs Node, Git and cloudflared, clones to `~\notes`, imports the data, builds, runs the server and the
+   Cloudflare Tunnel under pm2, starts both at login, and stops the laptop sleeping on power. A browser opens once
+   to authorize Cloudflare: pick `naeemislam.com`. Windows may ask to allow Node on the network: allow it.
+3. **Add a login** (the app has none): dash.cloudflare.com → Zero Trust → Access → Applications → Add →
+   Self-hosted. Domain `notes.naeemislam.com`, session 1 month, policy Allow → Emails → your email. Login is an
+   emailed one-time code.
+4. iPad: open https://notes.naeemislam.com → log in → Share → Add to Home Screen.
+
+Re-run the script to update after pulling new code. Check on it with `pm2 status` and `pm2 logs notes`.
+Use one server at a time: once Windows hosts it, stop the Mac server so the two copies don't diverge.
+
 ## How it works
 
 - **Typing:** works like Notion. Type `/` for headings, lists, to-dos, code, images, **Two/Three Columns**, **Drawing**.
