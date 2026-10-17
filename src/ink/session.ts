@@ -127,7 +127,7 @@ export function startInk(e: PointerEvent, tool: InkTool, target: InkTarget) {
 
 /**
  * iPad: stop Apple Pencil from scrolling, selecting text, or triggering the magnifier
- * on ink surfaces, while a finger still scrolls normally.
+ * on ink surfaces, while a finger still scrolls normally. Also blocks pinch zoom everywhere.
  */
 export function installStylusGuard() {
   const guard = (e: TouchEvent) => {
@@ -142,4 +142,12 @@ export function installStylusGuard() {
   };
   document.addEventListener('touchstart', guard, { passive: false });
   document.addEventListener('touchmove', guard, { passive: false });
+
+  // No page zoom: Safari ignores user-scalable=no in a browser tab, and a zoomed page
+  // makes the live stroke draw offset and at the wrong width until it's committed.
+  const noZoom = (e: Event) => e.preventDefault();
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, noZoom, { passive: false });
+  }
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 }

@@ -15,10 +15,12 @@
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+html, body {
+  touch-action: pan-x pan-y; /* scrolling only: no pinch or double-tap zoom (zoom offsets live ink) */
+}
 body {
   background: var(--bg);
   overscroll-behavior: none;
-  touch-action: manipulation; /* no double-tap zoom on iPad */
 }
 button { font: inherit; color: inherit; }
 
