@@ -61,7 +61,7 @@ Run npm.cmd run build
 
 Step '5/7 Starting the server with pm2'
 if (-not (Have pm2)) { Run npm.cmd install -g pm2; RefreshPath }
-pm2.cmd delete notes 2>$null | Out-Null
+cmd /c "pm2 delete notes >nul 2>&1"
 Run pm2.cmd start server.mjs --name notes
 
 Step "6/7 Cloudflare Tunnel for $Hostname"
@@ -90,7 +90,7 @@ ingress:
     service: http://localhost:5180
   - service: http_status:404
 "@ | Set-Content -Path $cfg -Encoding ascii
-pm2.cmd delete notes-tunnel 2>$null | Out-Null
+cmd /c "pm2 delete notes-tunnel >nul 2>&1"
 Run pm2.cmd start (Get-Command cloudflared).Source --name notes-tunnel --interpreter none '--' tunnel --config $cfg run
 Run pm2.cmd save
 
