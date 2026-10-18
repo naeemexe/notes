@@ -10,7 +10,7 @@ Single user for now; a Node server on the Mac serves the app to both devices ove
 
 ## Stack
 React 19 + TypeScript + Vite · BlockNote 0.56 (TipTap/ProseMirror) + @blocknote/xl-multi-column ·
-Canvas + perfect-freehand for ink · `server.mjs`: zero-dependency Node http server · JSON files in `data/` (gitignored).
+Canvas ink (own renderer, no library) · `server.mjs`: zero-dependency Node http server · JSON files in `data/` (gitignored).
 
 ## Layout
 - `server.mjs` — REST API + static `dist/`. Atomic, per-file queued writes.
@@ -22,7 +22,7 @@ Canvas + perfect-freehand for ink · `server.mjs`: zero-dependency Node http ser
   - `session.ts` — one live stroke on a fixed full-screen overlay canvas, then `target.commit(clientPoints)`. `installStylusGuard` stops Pencil scrolling on `.ink-surface`.
   - `DrawingBlock.tsx` — BlockNote block (`drawingId` prop only). Converts client→base coords, auto-grows, eraser hit-test, renders in 1024-unit canvas tiles (IntersectionObserver frees off-screen tiles).
   - `drawStore.ts` — drawing cache, ink undo stack, debounced saves, `controllers` registry of mounted drawings.
-  - `render.ts` — points → perfect-freehand outline → cached Path2D. Highlighter drawn under pen.
+  - `render.ts` — points → chain of pressure-sized round dots joined by tangents → cached Path2D. Depends only on earlier points, so live ink never moves. Highlighter drawn under pen.
 
 ## Key design decisions
 - Strokes are stored separately from the document (`data/drawings/<id>.json`); the doc only holds a `drawing` block with `drawingId`. Drawing never creates editor transactions.
@@ -33,7 +33,7 @@ Canvas + perfect-freehand for ink · `server.mjs`: zero-dependency Node http ser
 
 ## Data (`data/`)
 `index.json` (page metas: id, title, parentId, order, rev, updatedAt) · `pages/<id>.json` (BlockNote blocks) ·
-`drawings/<id>.json` ({id, pageId, w, h, strokes:[{k:'pen'|'hl', c, s, pr, p:[x,y,pressure,...]}]}) · `files/` (uploads).
+`drawings/<id>.json` ({id, pageId, w, h, strokes:[{k:'pen'|'hl', c, s, pr, p:[x,y,pressure,...]}]}; a few strokes have `v:2` and [x,y,...] without pressure) · `files/` (uploads).
 
 ## Conventions
 - Keep the server dependency-free. Colors/sizes are CSS variables in `src/index.css`.

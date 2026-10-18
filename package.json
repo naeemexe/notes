@@ -15,7 +15,6 @@
     "@blocknote/mantine": "^0.56.0",
     "@blocknote/react": "^0.56.0",
     "@blocknote/xl-multi-column": "^0.56.0",
-    "perfect-freehand": "^1.2.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

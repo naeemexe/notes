@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
 import {
-  bbox, controllers, DEFAULT_H, getDrawing, loadDrawing, pageCtx, subscribe, updateDrawing,
+  bbox, controllers, DEFAULT_H, getDrawing, loadDrawing, pageCtx, stride, subscribe, updateDrawing,
   type Stroke,
 } from './drawStore';
 import { drawStrokes } from './render';
@@ -43,9 +43,10 @@ function hits(s: Stroke, x: number, y: number, r: number) {
   if (x < x0 - r || x > x1 + r || y < y0 - r || y > y1 + r) return false;
   const rr = r + s.s / 2;
   const p = s.p;
-  if (p.length <= 3) return Math.hypot(p[0] - x, p[1] - y) < rr;
-  for (let i = 3; i < p.length; i += 3) {
-    if (distToSeg(x, y, p[i - 3], p[i - 2], p[i], p[i + 1]) < rr) return true;
+  const n = stride(s);
+  if (p.length <= n) return Math.hypot(p[0] - x, p[1] - y) < rr;
+  for (let i = n; i < p.length; i += n) {
+    if (distToSeg(x, y, p[i - n], p[i - n + 1], p[i], p[i + 1]) < rr) return true;
   }
   return false;
 }

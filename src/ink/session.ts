@@ -1,6 +1,6 @@
 import type { Stroke } from './drawStore';
 import { getTools, type InkTool } from './tools';
-import { HL_ALPHA, outline, pathFromOutline } from './render';
+import { HL_ALPHA, strokeShape } from './render';
 
 /** Something that can receive a stroke drawn in client (viewport) coordinates. */
 export type InkTarget = {
@@ -10,7 +10,8 @@ export type InkTarget = {
   erase?(clientX: number, clientY: number, first: boolean): void;
 };
 
-type Live = { points: number[]; meta: Omit<Stroke, 'p'>; scale: number };
+// tip: the latest sample when it was too close to store; drawn live so the line always reaches the pen
+type Live = { points: number[]; meta: Omit<Stroke, 'p'>; scale: number; tip?: number[] };
 
 // ---- full-viewport overlay that shows the stroke while it's being drawn ----
 let overlay: HTMLCanvasElement | null = null;
@@ -37,11 +38,12 @@ function ensureOverlay() {
   resize();
 }
 
-function paintOne(l: Live, last: boolean) {
+function paintOne(l: Live) {
   const ctx = octx!;
   ctx.fillStyle = l.meta.c;
   ctx.globalAlpha = l.meta.k === 'hl' ? HL_ALPHA : 1;
-  ctx.fill(pathFromOutline(outline(l.points, l.meta.k, l.meta.s * l.scale, !!l.meta.pr, last)));
+  const pts = l.tip ? l.points.concat(l.tip) : l.points;
+  ctx.fill(strokeShape(pts, 3, l.meta.k, l.meta.s * l.scale, !!l.meta.pr));
 }
 
 function paint() {
@@ -51,11 +53,14 @@ function paint() {
   octx.setTransform(1, 0, 0, 1, 0, 0);
   octx.clearRect(0, 0, overlay.width, overlay.height);
   octx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  pending.forEach((l) => paintOne(l, true));
-  if (live) paintOne(live, false);
+  pending.forEach(paintOne);
+  if (live) paintOne(live);
   octx.globalAlpha = 1;
 }
 const schedulePaint = () => { if (!raf) raf = requestAnimationFrame(paint); };
+
+const MIN_DIST = 1; // screen px between stored points
+const P_SMOOTH = 0.35; // weight of each new pressure sample
 
 let activePointer: number | null = null;
 export const isInking = () => activePointer !== null;
@@ -91,14 +96,29 @@ export function startInk(e: PointerEvent, tool: InkTool, target: InkTarget) {
       : { k: 'pen', c: t.penColor, s: t.penSize / scale, pr: pressure ? 1 : 0 };
     const l: Live = { points: [], meta, scale };
     live = l;
-    const add = (ev: PointerEvent) => {
-      l.points.push(
-        Math.round(ev.clientX * 10) / 10,
-        Math.round(ev.clientY * 10) / 10,
-        pressure ? Math.round((ev.pressure || 0.5) * 100) / 100 : 0.5,
-      );
+    // Positions stay raw (no averaging, so nothing lags behind the pen); samples closer than
+    // MIN_DIST px are skipped (sub-pixel noise), and only pressure is averaged so width doesn't flicker.
+    let p = pressure ? e.pressure || 0.5 : 0.5;
+    const push = (x: number, y: number, pr: number) => {
+      l.points.push(Math.round(x * 10) / 10, Math.round(y * 10) / 10, Math.round(pr * 100) / 100);
     };
-    add(e);
+    // iPad Safari re-sends samples it already delivered in later coalesced batches. Each one is
+    // a step backwards, which used to show as beads along the line.
+    // They repeat an earlier position exactly, so skip any sample we've recently seen.
+    const recent: number[] = [];
+    const add = (ev: PointerEvent) => {
+      const x = Math.round(ev.clientX * 10) / 10, y = Math.round(ev.clientY * 10) / 10;
+      for (let i = 0; i < recent.length; i += 2) if (recent[i] === x && recent[i + 1] === y) return;
+      recent.push(x, y);
+      if (recent.length > 64) recent.splice(0, 2);
+      if (pressure) p += P_SMOOTH * ((ev.pressure || p) - p);
+      const n = l.points.length;
+      const d = Math.hypot(x - l.points[n - 3], y - l.points[n - 2]);
+      if (d >= MIN_DIST) { push(x, y, p); l.tip = undefined; }
+      else l.tip = d > 0 ? [x, y, Math.round(p * 100) / 100] : undefined;
+    };
+    push(e.clientX, e.clientY, p);
+    recent.push(l.points[0], l.points[1]);
     schedulePaint();
     move = (ev: PointerEvent) => {
       if (ev.pointerId !== activePointer) return;
@@ -111,6 +131,8 @@ export function startInk(e: PointerEvent, tool: InkTool, target: InkTarget) {
       if (ev.pointerId !== activePointer) return;
       end();
       live = null;
+      if (l.tip) l.points.push(...l.tip); // end exactly where the line was drawn
+      l.tip = undefined;
       if (l.points.length === 3) l.points.push(l.points[0] + 0.5, l.points[1] + 0.5, l.points[2]); // a dot
       pending.add(l);
       Promise.resolve(target.commit(l.points, meta)).finally(() => {

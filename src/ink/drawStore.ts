@@ -1,13 +1,20 @@
 import { api } from '../api';
 
-/** One ink stroke. Points are flat [x, y, pressure, x, y, pressure, ...] in the drawing's base coordinates. */
+/**
+ * One ink stroke, in the drawing's base coordinates. Points are flat [x, y, pressure, ...].
+ * A few strokes saved by a short-lived version have v: 2 and [x, y, ...] with no pressure.
+ */
 export type Stroke = {
   k: 'pen' | 'hl';
   c: string; // color
   s: number; // size (base units)
   pr: 0 | 1; // real pressure (Apple Pencil) vs simulated
+  v?: 2;
   p: number[];
 };
+
+/** Numbers per point in s.p. */
+export const stride = (s: Pick<Stroke, 'v'>) => (s.v === 2 ? 2 : 3);
 
 export type Drawing = {
   id: string;
@@ -37,7 +44,8 @@ export function bbox(s: Stroke) {
   let b = bboxCache.get(s);
   if (!b) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < s.p.length; i += 3) {
+    const n = stride(s);
+    for (let i = 0; i < s.p.length; i += n) {
       const x = s.p[i], y = s.p[i + 1];
       if (x < x0) x0 = x; if (x > x1) x1 = x;
       if (y < y0) y0 = y; if (y > y1) y1 = y;
