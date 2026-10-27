@@ -77,28 +77,24 @@ button { font: inherit; color: inherit; }
   display: flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 6px 0 8px;
   border-radius: 6px; cursor: pointer; font-size: 14px; user-select: none; -webkit-user-select: none;
 }
-.row:hover { background: var(--hover); }
 .row.active { background: var(--active); font-weight: 500; }
 .row-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chev {
   width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
   color: var(--muted); border-radius: 4px; transition: transform 0.12s; flex: none; font-size: 15px;
 }
-.chev:hover { background: var(--active); }
 .chev.open { transform: rotate(90deg); }
 .chev.empty { opacity: 0.35; }
 .row-actions { display: none; gap: 2px; }
-.row:hover .row-actions, .row.active .row-actions { display: flex; }
+.row.active .row-actions { display: flex; }
 .row-actions button {
   border: 0; background: none; width: 26px; height: 26px; border-radius: 5px; cursor: pointer;
   color: var(--muted); font-size: 13px;
 }
-.row-actions button:hover { background: var(--active); }
 .new-page {
   margin: 6px; padding: 10px; border: 0; background: none; text-align: left; border-radius: 6px;
   color: var(--muted); cursor: pointer; font-size: 14px; margin-bottom: max(6px, env(safe-area-inset-bottom));
 }
-.new-page:hover { background: var(--hover); }
 .scrim { display: none; }
 
 @media (max-width: 900px) {
@@ -123,7 +119,6 @@ button { font: inherit; color: inherit; }
   width: 38px; height: 34px; border: 0; background: none; border-radius: 7px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; font-size: 17px;
 }
-.icon-btn:hover:not(:disabled), .tool:hover, .size:hover { background: var(--hover); }
 .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tool.on, .size.on { background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,0.12); color: var(--accent); }
@@ -165,7 +160,6 @@ button { font: inherit; color: inherit; }
   position: relative; width: 100%; border-radius: 6px; overflow: hidden;
   transition: background-color 0.15s;
 }
-.ink-block:hover .ink-surface { background: var(--ink-hover); }
 .ink-block.inking .ink-surface { background-image: radial-gradient(var(--ink-dots) 1px, transparent 1px); background-size: 24px 24px; }
 .cur-pen { cursor: crosshair; }
 .cur-eraser { cursor: cell; }
@@ -180,22 +174,33 @@ button { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer;
   opacity: 0; transition: opacity 0.15s; background: var(--panel);
 }
-.ink-block:hover .ink-menu-btn { opacity: 1; }
 @media (hover: none) { .ink-menu-btn { opacity: 0.6; } }
 .ink-menu {
   position: absolute; top: 30px; right: 4px; z-index: 5; background: var(--panel); border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 4px; display: flex; flex-direction: column; min-width: 170px;
 }
 .ink-menu button { border: 0; background: none; text-align: left; padding: 9px 10px; border-radius: 5px; cursor: pointer; font-size: 14px; }
-.ink-menu button:hover { background: var(--hover); }
 .ink-menu .danger { color: var(--danger); }
 .ink-resize {
   height: 14px; display: flex; align-items: center; justify-content: center; cursor: ns-resize;
   opacity: 0; transition: opacity 0.15s; touch-action: none;
 }
 .ink-resize span { width: 36px; height: 4px; border-radius: 2px; background: var(--handle); }
-.ink-block:hover .ink-resize { opacity: 1; }
 @media (hover: none) { .ink-resize { opacity: 0.5; } }
+
+/* Hover styles only for real pointers. On iPad, a :hover rule that reveals something
+   makes Safari spend the first tap on hover and only click on the second. */
+@media (hover: hover) {
+  .row:hover { background: var(--hover); }
+  .row:hover .row-actions { display: flex; }
+  .chev:hover { background: var(--active); }
+  .row-actions button:hover { background: var(--active); }
+  .new-page:hover { background: var(--hover); }
+  .icon-btn:hover:not(:disabled), .tool:hover, .size:hover { background: var(--hover); }
+  .ink-block:hover .ink-surface { background: var(--ink-hover); }
+  .ink-block:hover .ink-menu-btn, .ink-block:hover .ink-resize { opacity: 1; }
+  .ink-menu button:hover { background: var(--hover); }
+}
 
 @media (max-width: 700px) {
   .page { padding-top: 24px; }

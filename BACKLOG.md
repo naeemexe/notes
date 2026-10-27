@@ -7,6 +7,7 @@ Work on one item (or a small group of related ones) per session, then commit.
 - [ ] Verify Apple Pencil on a real iPad (only tested with simulated pen events): pressure, palm rejection, no scrolling while writing
 - [ ] Editing the same page on two devices at the same time: last save wins and can drop the other device's edits
 - [ ] Lint errors from React-compiler rules (ref updated during render in `DrawingBlock.tsx`, etc.)
+- [x] Dual tap selection issue on elements and pages sidebar. Blue selection stuck + keyboard popping (hover styles only for real pointers; taps on drawings no longer select or focus)
 
 ## 🔜 Now (needed for studying)
 - [ ] Lasso select: move or resize part of a drawing

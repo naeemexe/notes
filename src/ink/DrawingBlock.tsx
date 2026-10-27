@@ -53,6 +53,7 @@ function hits(s: Stroke, x: number, y: number, r: number) {
 }
 
 function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
+  const blockRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const d = useSyncExternalStore((cb) => subscribe(id, cb), () => getDrawing(id));
   const [width, setWidth] = useState(0);
@@ -135,8 +136,19 @@ function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
         },
       });
     };
+    // A tap or click on a drawing is not an edit: don't let ProseMirror node-select it (blue)
+    // or focus the editor (iPad keyboard). ProseMirror skips events that are defaultPrevented,
+    // and this native listener runs before its handler on the editor root.
+    const block = blockRef.current!;
+    const onMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.isContentEditable) active.blur();
+    };
+    block.addEventListener('mousedown', onMouseDown);
     el.addEventListener('pointerdown', onDown);
     return () => {
+      block.removeEventListener('mousedown', onMouseDown);
       el.removeEventListener('pointerdown', onDown);
       if (controllers.get(id)?.el === el) controllers.delete(id);
     };
@@ -174,7 +186,7 @@ function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
   const inking = tools.tool !== 'type';
 
   return (
-    <div className={`ink-block ${inking ? 'inking' : ''}`} contentEditable={false}>
+    <div ref={blockRef} className={`ink-block ${inking ? 'inking' : ''}`} contentEditable={false}>
       <div
         ref={wrapRef}
         className={`ink-surface ${inking ? (tools.tool === 'eraser' ? 'cur-eraser' : 'cur-pen') : ''}`}
