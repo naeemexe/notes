@@ -3,6 +3,7 @@ import { api, newId, type PageMeta } from './api';
 import { PageView } from './PageEditor';
 import { canUndo, onUndoChange, undo } from './ink/drawStore';
 import { installStylusGuard } from './ink/session';
+import { inkColor, toggleTheme, useTheme } from './theme';
 import {
   HL_COLORS, HL_SIZES, PEN_COLORS, PEN_SIZES, setTools, useTools, type Tool,
 } from './ink/tools';
@@ -225,6 +226,7 @@ const LABELS: Record<Tool, string> = { type: 'Type (T / Esc)', pen: 'Pen (P)', h
 function Toolbar({ sidebar, onSidebar, offline }: { sidebar: boolean; onSidebar: () => void; offline: boolean }) {
   const t = useTools();
   const undoable = useSyncExternalStore(onUndoChange, canUndo);
+  const theme = useTheme();
   const isHl = t.tool === 'highlighter' || (t.tool === 'type' && t.lastInk === 'highlighter');
   const showInkOptions = t.tool === 'pen' || t.tool === 'highlighter';
   const colors = isHl ? HL_COLORS : PEN_COLORS;
@@ -249,7 +251,7 @@ function Toolbar({ sidebar, onSidebar, offline }: { sidebar: boolean; onSidebar:
               <button
                 key={c}
                 className={`swatch ${c === color ? 'on' : ''}`}
-                style={{ background: c }}
+                style={{ background: inkColor(c) }}
                 onClick={() => setTools(isHl ? { hlColor: c } : { penColor: c })}
               />
             ))}
@@ -276,6 +278,11 @@ function Toolbar({ sidebar, onSidebar, offline }: { sidebar: boolean; onSidebar:
         onClick={() => setTools({ fingerDraw: !t.fingerDraw })}
         title="Allow drawing with your finger (otherwise finger scrolls)"
       >☝️ <span className="chip-label">{t.fingerDraw ? 'Finger draws' : 'Finger scrolls'}</span></button>
+      <button
+        className="icon-btn"
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      >{theme === 'dark' ? '☀️' : '🌙'}</button>
     </div>
   );
 }

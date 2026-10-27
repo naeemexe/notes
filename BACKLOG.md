@@ -14,7 +14,7 @@ Work on one item (or a small group of related ones) per session, then commit.
 - [ ] Search inside page content, not just titles
 
 ## 📋 Later
-- [ ] Dark mode
+- [x] Dark mode (toolbar toggle; follows the OS until toggled; black ink shows white)
 - [ ] Drag pages in the sidebar to reorder or nest them
 - [ ] Page icons / emoji
 - [ ] Export a page as PDF (for printing or sharing)

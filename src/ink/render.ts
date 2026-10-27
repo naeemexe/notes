@@ -1,4 +1,5 @@
 import { stride, type Stroke } from './drawStore';
+import { inkColor } from '../theme';
 
 export const HL_ALPHA = 0.38;
 const THINNING = 0.55; // how much pressure changes pen width
@@ -120,7 +121,7 @@ export function strokePath(s: Stroke) {
 /** Draw strokes: highlighter under pen, like real paper. */
 export function drawStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
   ctx.globalAlpha = HL_ALPHA;
-  for (const s of strokes) if (s.k === 'hl') { ctx.fillStyle = s.c; ctx.fill(strokePath(s)); }
+  for (const s of strokes) if (s.k === 'hl') { ctx.fillStyle = inkColor(s.c); ctx.fill(strokePath(s)); }
   ctx.globalAlpha = 1;
-  for (const s of strokes) if (s.k === 'pen') { ctx.fillStyle = s.c; ctx.fill(strokePath(s)); }
+  for (const s of strokes) if (s.k === 'pen') { ctx.fillStyle = inkColor(s.c); ctx.fill(strokePath(s)); }
 }

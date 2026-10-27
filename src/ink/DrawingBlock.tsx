@@ -5,6 +5,7 @@ import {
   type Stroke,
 } from './drawStore';
 import { drawStrokes } from './render';
+import { useTheme } from '../theme';
 import { startInk } from './session';
 import { inkToolFor, useTools } from './tools';
 
@@ -205,6 +206,7 @@ const Tile = memo(function Tile({ index, strokes, scale, width, tileH }: {
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);
+  const theme = useTheme(); // ink colors depend on it
 
   useEffect(() => {
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: '800px 0px' });
@@ -222,7 +224,7 @@ const Tile = memo(function Tile({ index, strokes, scale, width, tileH }: {
     const top = index * TILE;
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, -top * dpr * scale);
     drawStrokes(ctx, strokes.filter((s) => { const b = bbox(s); return b[3] >= top && b[1] <= top + tileH; }));
-  }, [visible, strokes, scale, width, tileH, index]);
+  }, [visible, strokes, scale, width, tileH, index, theme]);
 
   return (
     <canvas

@@ -1,6 +1,7 @@
 import type { Stroke } from './drawStore';
 import { getTools, type InkTool } from './tools';
 import { HL_ALPHA, strokeShape } from './render';
+import { inkColor } from '../theme';
 
 /** Something that can receive a stroke drawn in client (viewport) coordinates. */
 export type InkTarget = {
@@ -40,7 +41,7 @@ function ensureOverlay() {
 
 function paintOne(l: Live) {
   const ctx = octx!;
-  ctx.fillStyle = l.meta.c;
+  ctx.fillStyle = inkColor(l.meta.c);
   ctx.globalAlpha = l.meta.k === 'hl' ? HL_ALPHA : 1;
   const pts = l.tip ? l.points.concat(l.tip) : l.points;
   ctx.fill(strokeShape(pts, 3, l.meta.k, l.meta.s * l.scale, !!l.meta.pr));

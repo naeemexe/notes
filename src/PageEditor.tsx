@@ -26,6 +26,7 @@ import {
 } from './ink/drawStore';
 import { startInk } from './ink/session';
 import { inkToolFor } from './ink/tools';
+import { useTheme } from './theme';
 
 const schema = withMultiColumn(
   BlockNoteSchema.create({
@@ -216,6 +217,8 @@ function PageEditor({ page, remoteRev, onTitle }: {
     editor.focus();
   };
 
+  const theme = useTheme();
+
   const slashItems = useCallback(async (query: string) => {
     const items = mergeByGroup([
       ...getDefaultReactSlashMenuItems(editor),
@@ -250,7 +253,7 @@ function PageEditor({ page, remoteRev, onTitle }: {
           }
         }}
       />
-      <BlockNoteView editor={editor} theme="light" slashMenu={false} onChange={scheduleSave}>
+      <BlockNoteView editor={editor} theme={theme} slashMenu={false} onChange={scheduleSave}>
         <SuggestionMenuController triggerCharacter="/" getItems={slashItems} />
       </BlockNoteView>
       <div ref={tailRef} className="ink-surface page-tail" onClick={onTailClick} />
