@@ -10,7 +10,7 @@ Work on one item (or a small group of related ones) per session, then commit.
 - [x] Dual tap selection issue on elements and pages sidebar. Blue selection stuck + keyboard popping (hover styles only for real pointers; taps on drawings no longer select or focus)
 
 ## 🔜 Now (needed for studying)
-- [ ] Lasso select: move or resize part of a drawing
+- [x] Lasso select: move or resize part of a drawing (L; drag inside to move, corners to resize, Delete/Backspace or the Delete button removes)
 - [ ] Image/PDF slide import with ink on top (annotate lecture slides)
 - [ ] Search inside page content, not just titles
 

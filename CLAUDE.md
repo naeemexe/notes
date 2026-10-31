@@ -21,6 +21,7 @@ Canvas ink (own renderer, no library) · `server.mjs`: zero-dependency Node http
   - `tools.ts` — tool state; `inkToolFor(pointerType)` decides if a pointer inks (Pencil always; mouse in ink mode; finger only if fingerDraw).
   - `session.ts` — one live stroke on a fixed full-screen overlay canvas, then `target.commit(clientPoints)`. `installStylusGuard` stops Pencil scrolling on `.ink-surface`.
   - `DrawingBlock.tsx` — BlockNote block (`drawingId` prop only). Converts client→base coords, auto-grows, eraser hit-test, renders in 1024-unit canvas tiles (IntersectionObserver frees off-screen tiles).
+  - `selection.ts` — lasso selection (stroke refs, so undo/refresh clears it), point-in-lasso, move/resize as one undo step. Selected strokes render on their own layer in `DrawingBlock`, stretched by CSS while dragging.
   - `drawStore.ts` — drawing cache, ink undo stack, debounced saves, `controllers` registry of mounted drawings.
   - `render.ts` — points → chain of pressure-sized round dots joined by tangents → cached Path2D. Depends only on earlier points, so live ink never moves. Highlighter drawn under pen.
 

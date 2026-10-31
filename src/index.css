@@ -165,6 +165,25 @@ button { font: inherit; color: inherit; }
 .cur-eraser { cursor: cell; }
 .inking ~ * .page-tail, .page-tail.cur-pen { cursor: crosshair; }
 .ink-tile { position: absolute; left: 0; width: 100%; pointer-events: none; }
+.cur-lasso { cursor: crosshair; }
+.ink-lasso { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.ink-lasso path { fill: color-mix(in srgb, var(--accent) 8%, transparent); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ink-sel { position: absolute; outline: 1.5px dashed var(--accent); outline-offset: 2px; cursor: move; touch-action: none; }
+.ink-sel canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ink-handle {
+  position: absolute; width: 12px; height: 12px; margin: -6px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--accent);
+}
+.ink-handle.nw { left: -2px; top: -2px; cursor: nwse-resize; }
+.ink-handle.ne { right: -2px; top: -2px; margin-right: -6px; cursor: nesw-resize; }
+.ink-handle.sw { left: -2px; bottom: -2px; margin-bottom: -6px; cursor: nesw-resize; }
+.ink-handle.se { right: -2px; bottom: -2px; margin: 0 -6px -6px 0; cursor: nwse-resize; }
+.ink-sel-del {
+  position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%);
+  border: 0; border-radius: 6px; padding: 5px 10px; font-size: 13px; cursor: pointer; white-space: nowrap;
+  background: var(--panel); color: var(--danger); box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.ink-sel-del.below { bottom: auto; top: calc(100% + 10px); }
 .ink-hint, .ink-loading {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   color: var(--faint); font-size: 14px; pointer-events: none;

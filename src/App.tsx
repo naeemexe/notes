@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { api, newId, type PageMeta } from './api';
 import { PageView } from './PageEditor';
 import { canUndo, onUndoChange, undo } from './ink/drawStore';
+import { deleteSelection } from './ink/selection';
 import { installStylusGuard } from './ink/session';
 import { inkColor, toggleTheme, useTheme } from './theme';
 import {
@@ -93,7 +94,8 @@ export default function App() {
       const typing = el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
       if (e.key === 'Escape') { setTools({ tool: 'type' }); return; }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
-      const map: Record<string, Tool> = { p: 'pen', h: 'highlighter', e: 'eraser', t: 'type' };
+      if ((e.key === 'Delete' || e.key === 'Backspace') && deleteSelection()) { e.preventDefault(); return; }
+      const map: Record<string, Tool> = { p: 'pen', h: 'highlighter', e: 'eraser', l: 'lasso', t: 'type' };
       if (map[e.key]) { setTools({ tool: map[e.key] }); e.preventDefault(); }
       if (e.key === 'z' || e.key === 'u') undo();
     };
@@ -220,8 +222,9 @@ const ICONS: Record<Tool, React.ReactNode> = {
   pen: <svg viewBox="0 0 24 24"><path d="M4 20l4-1L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4z" /></svg>,
   highlighter: <svg viewBox="0 0 24 24"><path d="M9 15l-4 4h5l2-2M9 15l7-10 4 3-7 10-4-3z" /></svg>,
   eraser: <svg viewBox="0 0 24 24"><path d="M8 20h12M4 15l8-9a2 2 0 0 1 3 0l3 3a2 2 0 0 1 0 3l-7 8H8l-4-5z" /></svg>,
+  lasso: <svg viewBox="0 0 24 24"><path d="M7 16.5C4.6 15.3 3 13.3 3 11c0-3.9 4-7 9-7s9 3.1 9 7-4 7-9 7c-1 0-2-.1-2.9-.4M7 16.5c-.6 1.2-.3 2.8 1 3.5M7 16.5c1.3-.6 2.6-.4 3.1.6" strokeDasharray="2.5 2.5" /></svg>,
 };
-const LABELS: Record<Tool, string> = { type: 'Type (T / Esc)', pen: 'Pen (P)', highlighter: 'Highlighter (H)', eraser: 'Eraser (E)' };
+const LABELS: Record<Tool, string> = { type: 'Type (T / Esc)', pen: 'Pen (P)', highlighter: 'Highlighter (H)', eraser: 'Eraser (E)', lasso: 'Lasso: select, move, resize (L)' };
 
 function Toolbar({ sidebar, onSidebar, offline }: { sidebar: boolean; onSidebar: () => void; offline: boolean }) {
   const t = useTools();
@@ -238,7 +241,7 @@ function Toolbar({ sidebar, onSidebar, offline }: { sidebar: boolean; onSidebar:
     <div className="toolbar">
       {!sidebar && <button className="icon-btn" onClick={onSidebar} title="Show pages">☰</button>}
       <div className="seg">
-        {(['type', 'pen', 'highlighter', 'eraser'] as Tool[]).map((k) => (
+        {(['type', 'pen', 'highlighter', 'eraser', 'lasso'] as Tool[]).map((k) => (
           <button key={k} className={`tool ${t.tool === k ? 'on' : ''}`} title={LABELS[k]} onClick={() => setTools({ tool: k })}>
             {ICONS[k]}
           </button>

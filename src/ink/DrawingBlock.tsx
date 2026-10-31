@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { forwardRef, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
 import {
   bbox, controllers, DEFAULT_H, getDrawing, loadDrawing, pageCtx, stride, subscribe, updateDrawing,
@@ -8,11 +8,16 @@ import { drawStrokes } from './render';
 import { useTheme } from '../theme';
 import { startInk } from './session';
 import { inkToolFor, useTools } from './tools';
+import {
+  clearSelection, deleteSelection, getSelection, selectedStrokes, setSelection, strokesInLasso,
+  transformSelection, unionBox, useSelection,
+} from './selection';
 
 /** Height of one canvas tile in base units. Tiling keeps us under iPad canvas size limits for very long drawings. */
 const TILE = 1024;
 const GROW_TRIGGER = 140; // when ink gets this close to the bottom...
 const GROW_TO = 320; // ...add this much room below it
+const HANDLE = 22; // screen px: grab radius of a selection corner
 
 export const DrawingBlock = createReactBlockSpec(
   {
@@ -59,8 +64,13 @@ function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
   const [width, setWidth] = useState(0);
   const [menu, setMenu] = useState(false);
   const tools = useTools();
+  const sel = useSelection();
+  const lassoRef = useRef<SVGPathElement>(null);
+  const selBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (!getDrawing(id)) loadDrawing(id, pageCtx.pageId); }, [id]);
+  useEffect(() => { if (tools.tool !== 'lasso') clearSelection(id); }, [tools.tool, id]);
+  useEffect(() => () => clearSelection(id), [id]);
 
   useLayoutEffect(() => {
     const el = wrapRef.current!;
@@ -106,6 +116,75 @@ function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
     };
     controllers.set(id, { el, scale: () => scaleRef.current, commitClient });
 
+    // Lasso tool: drag inside the selection to move it, a corner to resize it, elsewhere to lasso.
+    const startLasso = (e: PointerEvent) => {
+      const cur = getDrawing(id);
+      if (!cur) return;
+      const pid = e.pointerId;
+      const s = scaleRef.current;
+      const [sx, sy] = toBase(e.clientX, e.clientY);
+      const picked = selectedStrokes(cur.strokes, getSelection(), id);
+      const box = picked.length ? unionBox(picked) : null;
+      let mode: 'lasso' | 'move' | 'scale' = 'lasso';
+      let ax = 0, ay = 0, gx = 0, gy = 0; // fixed corner, grabbed corner
+      if (box) {
+        const corners = [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]];
+        const k = corners.findIndex(([x, y]) => Math.hypot(x - sx, y - sy) < HANDLE / s);
+        if (k >= 0) { mode = 'scale'; [gx, gy] = corners[k]; [ax, ay] = corners[3 - k]; }
+        else if (sx >= box[0] && sx <= box[2] && sy >= box[1] && sy <= box[3]) mode = 'move';
+      }
+      const poly = [sx, sy];
+      let f = 1, ox = 0, oy = 0;
+      const move = (ev: PointerEvent) => {
+        if (ev.pointerId !== pid) return;
+        const [x, y] = toBase(ev.clientX, ev.clientY);
+        if (mode === 'lasso') {
+          poly.push(x, y);
+          let dPath = '';
+          for (let i = 0; i < poly.length; i += 2) dPath += `${i ? 'L' : 'M'}${poly[i] * s} ${poly[i + 1] * s}`;
+          lassoRef.current?.setAttribute('d', dPath + 'Z');
+          return;
+        }
+        if (mode === 'move') {
+          // keep it on the drawing: not past the left/right edges or above the top
+          ox = Math.min(Math.max(x - sx, -box![0]), (getDrawing(id)?.w || Infinity) - box![2]);
+          oy = Math.max(y - sy, -box![1]);
+        } else {
+          const dx = gx - ax, dy = gy - ay;
+          f = Math.max(0.1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy));
+          ox = ax * (1 - f); oy = ay * (1 - f);
+        }
+        // preview by moving/stretching the selection layer; strokes change on release
+        const st = selBoxRef.current?.style;
+        if (st) {
+          st.left = `${(box![0] * f + ox) * s}px`; st.top = `${(box![1] * f + oy) * s}px`;
+          st.width = `${(box![2] - box![0]) * f * s}px`; st.height = `${(box![3] - box![1]) * f * s}px`;
+        }
+        if (oy + box![3] * f > cur.h - GROW_TRIGGER) updateDrawing(id, { h: Math.ceil(oy + box![3] * f + GROW_TO) }, { save: false });
+      };
+      const up = (ev: PointerEvent) => {
+        if (ev.pointerId !== pid) return;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        if (mode === 'lasso') {
+          lassoRef.current?.setAttribute('d', '');
+          const d = getDrawing(id);
+          setSelection(d && ev.type === 'pointerup' ? { drawingId: id, strokes: strokesInLasso(d.strokes, poly) } : null);
+          return;
+        }
+        const st = selBoxRef.current?.style;
+        if (st && box) {
+          st.left = `${box[0] * s}px`; st.top = `${box[1] * s}px`;
+          st.width = `${(box[2] - box[0]) * s}px`; st.height = `${(box[3] - box[1]) * s}px`;
+        }
+        if (f !== 1 || ox || oy) transformSelection(id, f, ox, oy);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+    };
+
     let erasedThisGesture = false;
     const onDown = (e: PointerEvent) => {
       if ((e.target as HTMLElement).closest('.ink-chrome')) return;
@@ -113,6 +192,7 @@ function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
       if (!tool) return;
       e.preventDefault();
       e.stopPropagation();
+      if (tool === 'lasso') { startLasso(e); return; }
       startInk(e, tool, {
         scale: () => scaleRef.current,
         onMove: (_cx, cy) => {
@@ -184,17 +264,22 @@ function DrawingView({ id, onDelete }: { id: string; onDelete: () => void }) {
 
   const tiles = Math.max(1, Math.ceil(h / TILE));
   const inking = tools.tool !== 'type';
+  const picked = useMemo(() => (d ? selectedStrokes(d.strokes, sel, id) : []), [d, sel, id]);
+  // selected strokes are drawn on their own layer (so moving them doesn't redraw the tiles)
+  const unpicked = useMemo(() => (d && picked.length ? d.strokes.filter((s) => !sel!.strokes.has(s)) : d?.strokes), [d, sel, picked]);
 
   return (
     <div ref={blockRef} className={`ink-block ${inking ? 'inking' : ''}`} contentEditable={false}>
       <div
         ref={wrapRef}
-        className={`ink-surface ${inking ? (tools.tool === 'eraser' ? 'cur-eraser' : 'cur-pen') : ''}`}
+        className={`ink-surface ${inking ? (tools.tool === 'eraser' ? 'cur-eraser' : tools.tool === 'lasso' ? 'cur-lasso' : 'cur-pen') : ''}`}
         style={{ height: h * scale }}
       >
         {width > 0 && d && Array.from({ length: tiles }, (_, i) => (
-          <Tile key={i} index={i} strokes={d.strokes} scale={scale} width={width} tileH={Math.min(TILE, h - i * TILE)} />
+          <Tile key={i} index={i} strokes={unpicked!} scale={scale} width={width} tileH={Math.min(TILE, h - i * TILE)} />
         ))}
+        {width > 0 && picked.length > 0 && <SelectionLayer ref={selBoxRef} strokes={picked} scale={scale} />}
+        <svg className="ink-lasso"><path ref={lassoRef} /></svg>
         {!d && <div className="ink-loading">Loading ink…</div>}
         {d && d.strokes.length === 0 && (
           <div className="ink-hint">{inking ? 'Draw here' : 'Pick the pen (or use Apple Pencil) to draw'}</div>
@@ -244,5 +329,36 @@ const Tile = memo(function Tile({ index, strokes, scale, width, tileH }: {
       className="ink-tile"
       style={{ top: index * TILE * scale, height: tileH * scale }}
     />
+  );
+});
+
+/** The selected strokes on a canvas of their own, with a dashed frame, corner handles and Delete. */
+const SelectionLayer = forwardRef<HTMLDivElement, { strokes: Stroke[]; scale: number }>(function SelectionLayer(
+  { strokes, scale }, ref,
+) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = useTheme();
+  const [x0, y0, x1, y1] = unionBox(strokes);
+  const w = (x1 - x0) * scale, h = (y1 - y0) * scale;
+
+  useEffect(() => {
+    const c = canvasRef.current!;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = Math.max(1, Math.round(w * dpr));
+    c.height = Math.max(1, Math.round(h * dpr));
+    const ctx = c.getContext('2d')!;
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, -x0 * dpr * scale, -y0 * dpr * scale);
+    drawStrokes(ctx, strokes);
+  }, [strokes, scale, x0, y0, w, h, theme]);
+
+  return (
+    <div ref={ref} className="ink-sel" style={{ left: x0 * scale, top: y0 * scale, width: w, height: h }}>
+      <canvas ref={canvasRef} />
+      {['nw', 'ne', 'sw', 'se'].map((k) => <span key={k} className={`ink-handle ${k}`} />)}
+      <button
+        className={`ink-chrome ink-sel-del ${y0 * scale < 40 ? 'below' : ''}`}
+        onClick={() => deleteSelection()}
+      >Delete</button>
+    </div>
   );
 });

@@ -176,7 +176,7 @@ function PageEditor({ page, remoteRev, onTitle }: {
     const tail = tailRef.current!;
     const onDown = (e: PointerEvent) => {
       const tool = inkToolFor(e.pointerType);
-      if (!tool || tool === 'eraser') return;
+      if (!tool || tool === 'eraser' || tool === 'lasso') return;
       e.preventDefault();
       const lastBlock = () => editor.document[editor.document.length - 1];
       const lastDrawing = () => {

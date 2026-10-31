@@ -1,11 +1,12 @@
 import { useSyncExternalStore } from 'react';
 
-export type InkTool = 'pen' | 'highlighter' | 'eraser';
+export type InkTool = 'pen' | 'highlighter' | 'eraser' | 'lasso';
 export type Tool = 'type' | InkTool;
 
 export type ToolState = {
   tool: Tool;
-  lastInk: InkTool;
+  /** what Apple Pencil uses while Type is selected (never the lasso) */
+  lastInk: Exclude<InkTool, 'lasso'>;
   penColor: string;
   penSize: number;
   hlColor: string;
@@ -43,7 +44,7 @@ export function getTools() {
 
 export function setTools(patch: Partial<ToolState>) {
   state = { ...state, ...patch };
-  if (patch.tool && patch.tool !== 'type') state.lastInk = patch.tool;
+  if (patch.tool && patch.tool !== 'type' && patch.tool !== 'lasso') state.lastInk = patch.tool;
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
   listeners.forEach((l) => l());
 }
